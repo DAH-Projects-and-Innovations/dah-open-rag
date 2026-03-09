@@ -1,3 +1,13 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.yml — Config de base (mode HYBRID par défaut)
+#
+# Mode HYBRID (Mistral ou Gemini) :
+#   docker compose up --build
+#
+# Mode FREE (Ollama local) :
+#   docker compose -f docker-compose.yml -f docker-compose.free.yml up --build
+# ─────────────────────────────────────────────────────────────────────────────
+
 services:
 
   backend:
@@ -7,8 +17,9 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      RAG_CONFIG: ${RAG_CONFIG:-hybrid}
     volumes:
-      # Persistance de la base vectorielle et des fichiers uploadés
       - chroma_data:/app/data/chroma_db
       - uploads_data:/app/data/uploads
     restart: unless-stopped
@@ -17,13 +28,12 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s   # Laisse le temps de charger les modèles
+      start_period: 90s   # Laisse le temps de charger les modèles d'embedding
 
   frontend:
     build:
       context: ./frontend
       args:
-        # Pointe vers le backend accessible depuis le navigateur
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     ports:
       - "80:80"

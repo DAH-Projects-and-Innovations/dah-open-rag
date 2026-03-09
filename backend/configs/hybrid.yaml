@@ -1,0 +1,82 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIG "HYBRID" — API cloud (Mistral ou Gemini) + embedding/reranking local
+# Choisissez un LLM ci-dessous et renseignez la clé API correspondante.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Modèle d'embedding (local, CPU — même que la config free)
+embedder:
+  name: "sentence_transformers"
+  params:
+    model_name: "BAAI/bge-large-en-v1.5"   # 1024 dims — meilleure qualité
+    device: "cpu"
+    normalize_embeddings: true
+    batch_size: 32
+
+# Base de données vectorielle (locale, persistante)
+vector_store:
+  name: "chroma"
+  params:
+    collection_name: "documents"
+    persist_directory: "./data/chroma_db"
+    distance_metric: "cosine"
+
+# Retrieval vectoriel
+retriever:
+  name: "vector_retriever"
+  params:
+    search_type: "similarity"
+    score_threshold: 0.0
+    top_k: 15
+
+# Reranking local (cross-encoder, aucune clé API)
+reranker:
+  name: "cross_encoder"
+  params:
+    model_name: "BAAI/bge-reranker-large"   # meilleure qualité que MiniLM
+    device: "cpu"
+    batch_size: 16
+
+# Gestionnaire de prompts
+prompt_managers:
+  name: "default"
+  params: {}
+
+# ── OPTION A : Mistral AI ────────────────────────────────────────────────────
+# Clé gratuite sur https://console.mistral.ai
+llm:
+  name: "mistral"
+  params:
+    model: "mistral-small-latest"           # bon rapport qualité/coût
+    api_key: "${MISTRAL_API_KEY}"
+    temperature: 0.7
+    max_tokens: 1500
+    top_p: 0.9
+    enable_citations: false
+    system_prompt_template: "rag_system"
+    user_prompt_template: "rag_user"
+    prevent_hallucinations: true
+
+# ── OPTION B : Google Gemini ─────────────────────────────────────────────────
+# Décommentez ce bloc et commentez le bloc Mistral ci-dessus.
+# Clé gratuite sur https://aistudio.google.com/apikey
+# llm:
+#   name: "gemini"
+#   params:
+#     model: "gemini-1.5-flash"             # rapide et gratuit (quota limité)
+#     api_key: "${GEMINI_API_KEY}"
+#     temperature: 0.7
+#     max_tokens: 1500
+#     top_p: 0.9
+#     enable_citations: false
+#     system_prompt_template: "rag_system"
+#     user_prompt_template: "rag_user"
+#     prevent_hallucinations: true
+
+# Configuration du pipeline
+pipeline_config:
+  name: "hybrid_rag_pipeline"
+  version: "1.0.0"
+  default_top_k: 7
+  default_rerank_top_k: 3
+  enable_caching: true
+  log_level: "INFO"

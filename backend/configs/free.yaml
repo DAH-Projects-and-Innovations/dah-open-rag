@@ -1,34 +1,39 @@
-# Modèle d'embedding (gratuit)
+# ─────────────────────────────────────────────────────────────────────────────
+# CONFIG "FREE" — 100 % local, aucune clé API requise
+# Prérequis : Ollama installé + modèle téléchargé
+#   → ollama pull llama3.1:8b
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Modèle d'embedding (local, CPU)
 embedder:
   name: "sentence_transformers"
   params:
-    model_name: "BAAI/bge-large-en-v1.5" # 1024 dimensions
-    device: "cpu" # Utiliser "cuda" si GPU disponible
+    model_name: "BAAI/bge-small-en-v1.5"   # 384 dims — léger et rapide (~130 MB)
+    device: "cpu"
     normalize_embeddings: true
-    batch_size: 32
+    batch_size: 16
 
-# Base de données vectorielle (gratuite, locale)
+# Base de données vectorielle (locale, persistante)
 vector_store:
   name: "chroma"
   params:
     collection_name: "documents"
     persist_directory: "./data/chroma_db"
-    # Paramètres ChromaDB
-    distance_metric: "cosine" # ou "l2", "ip"
+    distance_metric: "cosine"
 
-# Composant de récupération
+# Retrieval vectoriel
 retriever:
   name: "vector_retriever"
   params:
-    search_type: "similarity" # ou "mmr" pour Maximum Marginal Relevance
-    score_threshold: 0.0 # Seuil de similarité minimum (0-1)
-    top_k: 20 # Nombre de documents à fetcher avant filtrage
+    search_type: "similarity"
+    score_threshold: 0.0
+    top_k: 10
 
-# Reranking (optionnel, gratuit)
+# Reranking local (cross-encoder léger)
 reranker:
   name: "cross_encoder"
   params:
-    model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"   # ~85 MB, 10x plus rapide
     device: "cpu"
     batch_size: 16
 
@@ -37,42 +42,26 @@ prompt_managers:
   name: "default"
   params: {}
 
-# Modèle de génération (Ollama local)
-# llm:
-#  name: "ollama"  # Ce nom sera utilisé comme 'provider'
-#  params:
-#    model: "llama3.1:8b"
-#    base_url: "http://localhost:11434"
-#    temperature: 0.7
-#    max_tokens: 1000
-#    top_p: 0.9
-#    # Paramètres RAG
-#    enable_citations: false
-#    system_prompt_template: "rag_system"
-#    user_prompt_template: "rag_user"
-#    prevent_hallucinations: true
-#    # Paramètres additionnels Ollama
-#    num_ctx: 4096
-#    repeat_penalty: 1.1
-
+# LLM — Ollama local (aucune clé API)
 llm:
- name: "huggingface"
- params:
-   model: "HuggingFaceH4/zephyr-7b-beta"
-   api_key: "${HF_TOKEN}"
-   temperature: 0.7
-   max_tokens: 1000
-   top_p: 0.9
-   enable_citations: false
-   system_prompt_template: "rag_system"
-   user_prompt_template: "rag_user"
-   prevent_hallucinations: true
+  name: "ollama"
+  params:
+    model: "llama3.1:8b"
+    base_url: "${OLLAMA_BASE_URL}"          # défaut : http://localhost:11434
+    temperature: 0.7
+    max_tokens: 1000
+    top_p: 0.9
+    enable_citations: false
+    system_prompt_template: "rag_system"
+    user_prompt_template: "rag_user"
+    prevent_hallucinations: true
+    num_ctx: 4096
+    repeat_penalty: 1.1
 
 # Configuration du pipeline
 pipeline_config:
   name: "free_rag_pipeline"
   version: "1.0.0"
-  prompt_version: "1.0" # Version des templates de prompts
   default_top_k: 5
   default_rerank_top_k: 3
   enable_caching: true

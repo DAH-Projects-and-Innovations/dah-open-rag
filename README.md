@@ -9,89 +9,139 @@ Construit par [Data Afrique Hub](https://github.com/abel2319) · Licence MIT
 ## Présentation
 
 DAH Open RAG est un pipeline **Retrieval-Augmented Generation** clé-en-main.
-Uploadez vos PDF, TXT ou Markdown, posez vos questions — le système cherche les passages pertinents dans vos documents et génère une réponse sourcée.
+Uploadez vos PDF, TXT ou Markdown, posez vos questions — le système trouve les passages pertinents et génère une réponse sourcée.
 
 ```
-Question → Embedding → ChromaDB → Re-ranking → Mistral → Réponse + Sources
+Question → Embedding → ChromaDB → Re-ranking → LLM → Réponse + Sources
 ```
 
-**Stack :**
-| Couche | Technologie |
-|---|---|
-| API backend | FastAPI · Python 3.12 · uv |
-| Embedding | `BAAI/bge-large-en-v1.5` (local, CPU) |
-| Vector store | ChromaDB (persistant) |
-| Re-ranking | `BAAI/bge-reranker-large` (local, CPU) |
-| LLM | Mistral AI (`mistral-large-latest`) |
-| Frontend | React 19 · Vite · Tailwind CSS |
+Deux configurations sont disponibles :
+
+| | Config `free` | Config `hybrid` |
+|---|---|---|
+| **LLM** | Ollama (local) | Mistral ou Gemini (API cloud) |
+| **Clé API** | Aucune | Oui (gratuite) |
+| **Embedding** | `bge-small-en-v1.5` (local) | `bge-large-en-v1.5` (local) |
+| **Reranking** | `ms-marco-MiniLM` (local) | `bge-reranker-large` (local) |
+| **Coût** | 0 € | ~0 € avec quota gratuit |
+| **Qualité réponse** | Bonne | Excellente |
+| **RAM requise** | ~6 GB | ~4 GB |
 
 ---
 
-## Démarrage rapide — Docker (recommandé)
+## Prérequis
 
-### Prérequis
 - [Docker](https://docs.docker.com/get-docker/) + [Docker Compose](https://docs.docker.com/compose/)
-- Une clé API Mistral gratuite → [console.mistral.ai](https://console.mistral.ai)
 
-### 1 · Configurer l'environnement
+---
+
+## Mode HYBRID — Mistral ou Gemini (recommandé)
+
+### 1. Obtenir une clé API gratuite
+
+- **Mistral** → [console.mistral.ai](https://console.mistral.ai)
+- **Gemini** → [aistudio.google.com/apikey](https://aistudio.google.com/apikey)
+
+### 2. Configurer
 
 ```bash
 cp .env.example .env
-# Éditez .env et renseignez votre MISTRAL_API_KEY
 ```
 
-### 2 · Lancer
+Éditez `.env` :
+
+```env
+RAG_CONFIG=hybrid
+
+# Avec Mistral :
+MISTRAL_API_KEY=votre_clé_mistral
+
+# OU avec Gemini (voir instructions ci-dessous) :
+# GEMINI_API_KEY=votre_clé_gemini
+```
+
+**Utiliser Gemini :** ouvrez `backend/configs/hybrid.yaml`, commentez le bloc `llm: mistral` et décommentez le bloc `llm: gemini`.
+
+### 3. Lancer
 
 ```bash
 docker compose up --build
 ```
 
-> Le premier démarrage télécharge les modèles d'embedding (~1,3 GB) — comptez 5-10 min.
+> Premier démarrage : téléchargement des modèles d'embedding (~1.3 GB), ~5 min.
 
-- **Frontend** → [http://localhost](http://localhost)
-- **API docs** → [http://localhost:8000/docs](http://localhost:8000/docs)
-- **Health** → [http://localhost:8000/health](http://localhost:8000/health)
-
-### 3 · Utiliser
-
-1. Ouvrez [http://localhost](http://localhost)
-2. **Uploadez** un PDF/TXT/MD via le panneau gauche → cliquez **Indexer**
-3. **Posez** vos questions dans le chat
+- **Interface** → http://localhost
+- **API docs** → http://localhost:8000/docs
 
 ---
 
-## Démarrage manuel (développement)
+## Mode FREE — Ollama (100 % local, aucune clé API)
+
+### 1. Configurer
+
+```bash
+cp .env.example .env
+```
+
+Éditez `.env` :
+
+```env
+RAG_CONFIG=free
+```
+
+### 2. Lancer (backend + frontend + Ollama)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.free.yml up --build
+```
+
+> Premier démarrage : téléchargement d'Ollama + modèle `llama3.1:8b` (~4.7 GB), ~10-20 min.
+> Les démarrages suivants sont instantanés (modèles mis en cache).
+
+- **Interface** → http://localhost
+- **API docs** → http://localhost:8000/docs
+
+### Variante : Ollama déjà installé localement
+
+```bash
+# Télécharger le modèle une seule fois
+ollama pull llama3.1:8b
+
+# Lancer uniquement backend + frontend
+RAG_CONFIG=free docker compose up --build
+```
+
+---
+
+## Développement sans Docker
 
 ### Backend
 
 ```bash
 cd backend
-
-# Installer les dépendances avec uv
 uv sync
-
-# Copier et remplir les variables d'environnement
-cp ../.env.example .env
-# → Renseignez MISTRAL_API_KEY dans .env
-
-# Lancer le serveur (rechargement automatique)
+cp ../.env.example .env   # puis remplissez .env
 uv run uvicorn src.api.main:app --reload
-# API disponible sur http://localhost:8000
+# → http://localhost:8000
 ```
 
 ### Frontend
 
 ```bash
 cd frontend
-
 npm install
-
-# Optionnel : pointer vers un backend distant
-# echo "VITE_API_URL=http://mon-serveur:8000" > .env
-
 npm run dev
-# Interface disponible sur http://localhost:5173
+# → http://localhost:5173
 ```
+
+---
+
+## Utilisation
+
+1. Ouvrez l'interface dans votre navigateur
+2. **Uploadez** un fichier PDF, TXT ou Markdown (panneau gauche)
+3. Cliquez **Indexer dans la base**
+4. **Posez vos questions** — la réponse affiche les sources utilisées
 
 ---
 
@@ -99,33 +149,45 @@ npm run dev
 
 ```
 dah-open-rag/
-├── backend/
-│   ├── src/
-│   │   ├── api/            # Routes FastAPI (/query, /ingest, /health)
-│   │   ├── core/           # Interfaces abstraites + orchestrateur
-│   │   ├── llm/            # Adaptateurs LLM (Mistral, OpenAI, Ollama…)
-│   │   ├── retrieval/      # Dense retriever, BM25, Hybrid, Reranker
-│   │   ├── vectorstores/   # ChromaDB, FAISS
-│   │   ├── Loaders/        # Chargement PDF, TXT, Markdown
-│   │   ├── Chunkers/       # Découpage en chunks
-│   │   ├── Embedders/      # SentenceTransformers
-│   │   └── implementations/# Enregistrement des composants
-│   ├── configs/
-│   │   └── free.yaml       # Configuration active
-│   ├── data/               # ChromaDB + uploads (ignoré par git)
-│   ├── pyproject.toml
-│   └── Dockerfile
-│
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx         # Interface principale
-│   │   └── services/api.js # Client HTTP vers le backend
-│   ├── package.json
-│   └── Dockerfile
-│
-├── docker-compose.yml
+├── docker-compose.yml          ← Mode HYBRID
+├── docker-compose.free.yml     ← Override mode FREE (+ Ollama)
 ├── .env.example
-└── README.md
+│
+├── backend/
+│   ├── configs/
+│   │   ├── free.yaml           ← Ollama local
+│   │   └── hybrid.yaml         ← Mistral ou Gemini
+│   └── src/
+│       ├── api/                ← Routes FastAPI
+│       ├── core/               ← Interfaces + orchestrateur
+│       ├── llm/                ← Adaptateurs (Ollama, Mistral, Gemini…)
+│       ├── retrieval/          ← Dense retriever, Reranker
+│       ├── vectorstores/       ← ChromaDB
+│       ├── Loaders/            ← PDF, TXT, Markdown
+│       └── Chunkers/
+│
+└── frontend/
+    └── src/
+        ├── App.jsx
+        └── services/api.js
+```
+
+---
+
+## Changer de modèle
+
+Sans toucher au code, modifiez simplement le YAML :
+
+```yaml
+# free.yaml — changer le modèle Ollama
+llm:
+  params:
+    model: "mistral:7b"          # ou gemma2:9b, phi3, qwen2.5, etc.
+
+# hybrid.yaml — changer le modèle Mistral
+llm:
+  params:
+    model: "mistral-large-latest"
 ```
 
 ---
@@ -143,61 +205,23 @@ dah-open-rag/
 }
 ```
 
-**Réponse :**
-```json
-{
-  "answer": "Selon les documents indexés…",
-  "sources": [
-    { "metadata": { "filename": "rapport_edu.pdf" }, "score": 0.92 }
-  ]
-}
-```
-
 ### `POST /ingest`
-Upload multipart de fichiers (PDF, TXT, MD).
-
 ```bash
-curl -X POST http://localhost:8000/ingest \
-  -F "files=@mon_document.pdf"
+curl -X POST http://localhost:8000/ingest -F "files=@rapport.pdf"
 ```
 
 ### `GET /health`
 ```json
-{ "status": "up", "stats": { "embedder": {…}, "vector_store": {…} } }
-```
-
----
-
-## Configuration
-
-Tout se passe dans [`backend/configs/free.yaml`](backend/configs/free.yaml).
-Changer un composant = changer une ligne, sans toucher au code.
-
-```yaml
-embedder:
-  name: "sentence_transformers"
-  params:
-    model_name: "BAAI/bge-large-en-v1.5"  # ← changer ici
-
-llm:
-  name: "mistral"
-  params:
-    model: "mistral-large-latest"          # ← ou "mistral-small-latest"
-    api_key: "${MISTRAL_API_KEY}"
+{ "status": "up", "stats": { ... } }
 ```
 
 ---
 
 ## Contribuer
 
-Les contributions sont les bienvenues !
-
 1. Forkez le repo
-2. Créez une branche : `git checkout -b feat/mon-ajout`
-3. Committez vos changements
-4. Ouvrez une **Pull Request**
-
-Consultez [CONTRIBUTING.md](CONTRIBUTING.md) pour les détails.
+2. `git checkout -b feat/mon-ajout`
+3. Ouvrez une **Pull Request**
 
 ---
 

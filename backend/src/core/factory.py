@@ -87,7 +87,11 @@ class RAGPipelineFactory:
             return [cls._replace_env_vars(item) for item in config]
         elif isinstance(config, str) and config.startswith('${') and config.endswith('}'):
             env_var = config[2:-1]
-            return os.getenv(env_var, config)
+            # Valeurs par défaut raisonnables pour les variables optionnelles
+            defaults = {
+                "OLLAMA_BASE_URL": "http://localhost:11434",
+            }
+            return os.getenv(env_var, defaults.get(env_var, config))
         return config
     
     @classmethod

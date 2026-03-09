@@ -22,6 +22,7 @@ class LLMProvider(Enum):
     OLLAMA = "ollama"
     HUGGINGFACE = "huggingface"
     MISTRAL = "mistral"
+    GEMINI = "gemini"
 
 
 @dataclass
@@ -475,6 +476,58 @@ class MistralLLM(BaseLLM):
             metadata={'response_id': response.id}
         )
 
+class GeminiLLM(BaseLLM):
+    """LLM pour Google Gemini via l'API compatible OpenAI."""
+
+    GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/"
+
+    def _initialize_client(self) -> None:
+        if self._client is None:
+            try:
+                from openai import OpenAI
+                self._client = OpenAI(
+                    api_key=self.config.api_key,
+                    base_url=self.config.api_base or self.GEMINI_BASE_URL,
+                    timeout=self.config.timeout,
+                )
+            except ImportError:
+                raise ImportError(
+                    "openai package required for Gemini. Install with: pip install openai"
+                )
+
+    def generate(self, messages: List[LLMMessage], **kwargs) -> LLMResponse:
+        """Génère une réponse via Google Gemini (endpoint compatible OpenAI)."""
+        self._initialize_client()
+
+        params = {
+            'model': kwargs.get('model', self.config.model),
+            'temperature': kwargs.get('temperature', self.config.temperature),
+            'max_tokens': kwargs.get('max_tokens', self.config.max_tokens),
+            'top_p': kwargs.get('top_p', self.config.top_p),
+        }
+
+        messages_dict = [msg.to_dict() for msg in messages]
+
+        response = self._client.chat.completions.create(
+            messages=messages_dict,
+            **params
+        )
+
+        choice = response.choices[0]
+
+        return LLMResponse(
+            content=choice.message.content,
+            model=response.model,
+            usage={
+                'prompt_tokens': response.usage.prompt_tokens if response.usage else 0,
+                'completion_tokens': response.usage.completion_tokens if response.usage else 0,
+                'total_tokens': response.usage.total_tokens if response.usage else 0,
+            },
+            finish_reason=choice.finish_reason,
+            metadata={'response_id': response.id}
+        )
+
+
 def create_llm(
     provider: Union[str, LLMProvider],
     model: str,
@@ -504,7 +557,9 @@ def create_llm(
         return OllamaLLM(config)
     elif provider == LLMProvider.HUGGINGFACE:
         return HuggingFaceLLM(config)
-    elif provider == LLMProvider.MISTRAL:  # Ajout
+    elif provider == LLMProvider.MISTRAL:
         return MistralLLM(config)
+    elif provider == LLMProvider.GEMINI:
+        return GeminiLLM(config)
     else:
         raise ValueError(f"Unknown provider: {provider}")

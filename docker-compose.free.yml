@@ -1,0 +1,31 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# docker-compose.free.yml — Override pour le mode FREE (Ollama local)
+#
+# Utilisation :
+#   docker compose -f docker-compose.yml -f docker-compose.free.yml up --build
+#
+# Ce fichier ajoute un service Ollama et reconfigure le backend pour l'utiliser.
+# Le modèle est téléchargé automatiquement au premier démarrage (~4.7 GB).
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama   # modèles persistants entre redémarrages
+    restart: unless-stopped
+    # Télécharge llama3.1:8b au premier démarrage s'il n'est pas déjà présent
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llama3.1:8b && wait"]
+
+  backend:
+    environment:
+      RAG_CONFIG: free
+      OLLAMA_BASE_URL: http://ollama:11434   # URL interne Docker
+    depends_on:
+      - ollama
+
+volumes:
+  ollama_models:
