@@ -1,0 +1,47 @@
+"""
+Module Prompts - Bibliothèque de prompts configurables.
+"""
+
+from .example_prompts import (
+    ALL_EXAMPLE_PROMPTS,
+    load_example_prompts,
+    
+    # Prompts génériques
+    GENERIC_QA_SYSTEM,
+    
+    # Prompts domaines
+    TECHNICAL_DOCUMENTATION_SYSTEM,
+    MEDICAL_INFORMATION_SYSTEM,
+    LEGAL_RESEARCH_SYSTEM,
+    CUSTOMER_SUPPORT_SYSTEM,
+    
+    # Prompts styles
+    ELI5_SYSTEM,
+    DETAILED_ANALYSIS_SYSTEM,
+    COMPARATIVE_ANALYSIS_SYSTEM,
+    
+    # Prompts spéciaux
+    MULTILINGUAL_SYSTEM,
+    CONVERSATIONAL_SYSTEM,
+    STRUCTURED_JSON_SYSTEM,
+    BULLET_POINTS_SYSTEM,
+    FACT_CHECK_SYSTEM
+)
+
+__all__ = [
+    'ALL_EXAMPLE_PROMPTS',
+    'load_example_prompts',
+    'GENERIC_QA_SYSTEM',
+    'TECHNICAL_DOCUMENTATION_SYSTEM',
+    'MEDICAL_INFORMATION_SYSTEM',
+    'LEGAL_RESEARCH_SYSTEM',
+    'CUSTOMER_SUPPORT_SYSTEM',
+    'ELI5_SYSTEM',
+    'DETAILED_ANALYSIS_SYSTEM',
+    'COMPARATIVE_ANALYSIS_SYSTEM',
+    'MULTILINGUAL_SYSTEM',
+    'CONVERSATIONAL_SYSTEM',
+    'STRUCTURED_JSON_SYSTEM',
+    'BULLET_POINTS_SYSTEM',
+    'FACT_CHECK_SYSTEM'
+]

@@ -1,0 +1,79 @@
+# Modèle d'embedding (gratuit)
+embedder:
+  name: "sentence_transformers"
+  params:
+    model_name: "BAAI/bge-large-en-v1.5" # 1024 dimensions
+    device: "cpu" # Utiliser "cuda" si GPU disponible
+    normalize_embeddings: true
+    batch_size: 32
+
+# Base de données vectorielle (gratuite, locale)
+vector_store:
+  name: "chroma"
+  params:
+    collection_name: "documents"
+    persist_directory: "./data/chroma_db"
+    # Paramètres ChromaDB
+    distance_metric: "cosine" # ou "l2", "ip"
+
+# Composant de récupération
+retriever:
+  name: "vector_retriever"
+  params:
+    search_type: "similarity" # ou "mmr" pour Maximum Marginal Relevance
+    score_threshold: 0.0 # Seuil de similarité minimum (0-1)
+    top_k: 20 # Nombre de documents à fetcher avant filtrage
+
+# Reranking (optionnel, gratuit)
+reranker:
+  name: "cross_encoder"
+  params:
+    model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    device: "cpu"
+    batch_size: 16
+
+# Gestionnaire de prompts
+prompt_managers:
+  name: "default"
+  params: {}
+
+# Modèle de génération (Ollama local)
+# llm:
+#  name: "ollama"  # Ce nom sera utilisé comme 'provider'
+#  params:
+#    model: "llama3.1:8b"
+#    base_url: "http://localhost:11434"
+#    temperature: 0.7
+#    max_tokens: 1000
+#    top_p: 0.9
+#    # Paramètres RAG
+#    enable_citations: false
+#    system_prompt_template: "rag_system"
+#    user_prompt_template: "rag_user"
+#    prevent_hallucinations: true
+#    # Paramètres additionnels Ollama
+#    num_ctx: 4096
+#    repeat_penalty: 1.1
+
+llm:
+ name: "huggingface"
+ params:
+   model: "HuggingFaceH4/zephyr-7b-beta"
+   api_key: "${HF_TOKEN}"
+   temperature: 0.7
+   max_tokens: 1000
+   top_p: 0.9
+   enable_citations: false
+   system_prompt_template: "rag_system"
+   user_prompt_template: "rag_user"
+   prevent_hallucinations: true
+
+# Configuration du pipeline
+pipeline_config:
+  name: "free_rag_pipeline"
+  version: "1.0.0"
+  prompt_version: "1.0" # Version des templates de prompts
+  default_top_k: 5
+  default_rerank_top_k: 3
+  enable_caching: true
+  log_level: "INFO"
